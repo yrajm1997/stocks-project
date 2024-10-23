@@ -9,19 +9,25 @@ This is a repo for GenAI M5 AST2
 
 2. Start a Codespace by going to `Code` dropdown > Select `Codespaces` tab > Click on `Create codespace on main`
 
-3. Install requirement:
+3. Create and Activate a virtual environment:
    ```
-   pip install -r requirements.txt
+   python -m venv venv
+   source venv/bin/activate
    ```
 
-4. Read data from pickle files and create a database:
+4. Install requirement:
+   ```
+   pip install -r requirements/requirements.txt
+   ```
+
+5. Read data from pickle files and create a database:
    ```
    python main.py
    ```
 
-5. Start application:
+6. Start application:
    ```
    chainlit run app.py
    ```
 
-6. Once the application is running, access it in browser
+7. Once the application is running, access it in browser
