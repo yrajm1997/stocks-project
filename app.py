@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain.schema.runnable import RunnablePassthrough
+from langchain_experimental.utilities import PythonREPL
+from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
 
 ##### SQL Query Generation using an LLM
@@ -23,7 +25,6 @@ llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
 
 # Create Chain for Query Generation using LCEL (LangChain Expression Language)
 # Build prompt
-
 template1 = """
 You are a SQLite expert. Given an input request, return a syntactically correct SQLite query to run.
 Unless the user specifies in the question a specific number of examples to obtain, query for at most 10 results using the LIMIT clause as per SQLite. You can order the results to return the most informative data in the database.
@@ -54,8 +55,85 @@ chain1 = (PROMPT1
           | StrOutputParser()       # to get output in a more usable format
           )
 
-# Generate sql query
-response1 = chain1.invoke({"request": "Need open, high prices for any ten Wipro records"})
-print(response1)
+## Generate sql query
+# response1 = chain1.invoke({"request": "Need open, high prices for any ten Wipro records"})
+# print(response1)
 
 
+### Python Code generation using an LLM
+python_repl = PythonREPL()
+repl_tool = Tool(
+    name="python_repl",
+    description="A Python shell. Use this to execute python commands. Input should be a valid python command. If you want to see the output of a value, you should print it out with `print(...)`.",
+    func=python_repl.run,
+)
+repl_tool.run("1+1")
+
+
+# Create Chain for Insights Generation
+# Build prompt
+template2 = """
+Use the following pieces of user request and sql query to generate python code that should first load the required data from 'stock_db.sqlite' database and 
+then show insights related to that data. If the generated insights contains a figure or plot then that should be saved inside the 'figures' directory.
+Generate and return python code only, no additional text.
+If you don't know the answer, just say that you don't know, don't try to make up an answer.
+
+{request_plus_sqlquery}
+
+Generate code:
+"""
+
+PROMPT2 = PromptTemplate(input_variables=["request_plus_sqlquery"], template=template2)
+
+# Query Generation Chain - created using LCEL (LangChain Expression Language)
+chain2 = (PROMPT2
+          | llm
+          | StrOutputParser()       # to get output in a more usable format
+          )
+
+final_chain = chain1 | chain2
+
+
+# Create UI using Chainlit
+import chainlit as cl
+
+@cl.on_start
+def start():
+    # Set the title of the Chainlit app
+    cl.Title("My Application")
+
+@cl.on_chat_start
+async def start_chat():
+    await cl.Message("Welcome! Enter the query for stock prices.")
+
+@cl.on_message
+async def main(message: cl.Message):
+
+    # Remove any files from 'figures' directory
+    for filename in os.listdir('figures'):
+        file_path = os.path.join('figures', filename)
+        if os.path.isfile(file_path):
+            os.remove(file_path)  # Remove file
+
+    print(f"Message: {message}")
+    response = final_chain.invoke({"request": message})
+    print(response)
+    print("="*50)
+    output = repl_tool.run(response)
+    print(output)
+
+    # Send response
+    # await cl.Message(content=f"Received: {message.content}",).send()
+
+    # Send the plot to the chat
+    for imgfile in os.listdir('figures'): 
+        if os.path.isfile(os.path.join('figures', imgfile)):
+            # Attach the image to the message
+            image = cl.Image(path="./figures/"+imgfile, name="image1", display="inline")
+            await cl.Message(
+                content=f"Response: {output}",
+                elements=[image],
+            ).send()
+        else:
+            # Send response
+            await cl.Message(content=f"Response: {output}",).send()
