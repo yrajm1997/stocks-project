@@ -166,4 +166,4 @@ cython_debug/
 .files
 chainlit.md
 stock_db.sqlite
-
+figures/*.png

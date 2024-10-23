@@ -100,6 +100,10 @@ final_chain = chain1 | chain2
 # Create UI using Chainlit
 import chainlit as cl
 
+@cl.on_chat_start
+async def main():
+    await cl.Message(content=f"Welcome to Stock Prices Insights Application").send()
+
 @cl.on_message
 async def main(message: cl.Message):
 
