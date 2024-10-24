@@ -31,6 +31,9 @@ Unless the user specifies in the question a specific number of examples to obtai
 Never query for all columns from a table. You must query only the columns that are needed to answer the question. Wrap each column name in double quotes (") to denote them as delimited identifiers.
 Pay attention to use only the column names you can see in the tables below. Be careful to not query for columns that do not exist. Also, pay attention to which column is in which table.
 Pay attention to use date('now') function to get the current date, if the question involves "today".
+Do not return any new columns nor perform aggregation on columns. Return only the columns present in tables and further aggregations will be done by python code in later steps.
+The databse currently have data of Nifty 50 constituents, and the symbol column includes the ticker representing the stock.
+Once you start generating sql queries make sure that you only use correct ticker symbol for filtering and restrict yourself to use only current Nifty 50 constituents.
 
 Use the following format:
 
@@ -93,6 +96,34 @@ chain2 = (PROMPT2
           | StrOutputParser()       # to get output in a more usable format
           )
 
+
+# Create Chain for Generating Suggestions
+# Build prompt
+template3 = """
+Use the following pieces of user request and database details to generate suggestions for user to ask for useful insights from the database.
+Suggestion should not be more than 4 lines.
+If you don't know the answer, just say that you don't know, don't try to make up an answer.
+
+SQLite database has following tables:
+CREATE TABLE IF NOT EXISTS stock_prices (date DATE, open DOUBLE, high DOUBLE, low DOUBLE, close DOUBLE, volume INT, symbol VARCHAR(20));
+CREATE TABLE IF NOT EXISTS income_statement( date DATE, symbol VARCHAR(20), reportedCurrency VARCHAR(20), cik VARCHAR(20), fillingDate DATE, acceptedDate DATE, calendarYear INTEGER, period VARCHAR(20), revenue INTEGER, costOfRevenue INTEGER, grossProfit INTEGER, grossProfitRatio DOUBLE, researchAndDevelopmentExpenses INTEGER, generalAndAdministrativeExpenses INTEGER, sellingAndMarketingExpenses INTEGER, sellingGeneralAndAdministrativeExpenses INTEGER, otherExpenses INTEGER, operatingExpenses INTEGER, costAndExpenses INTEGER, interestIncome INTEGER, interestExpense INTEGER, depreciationAndAmortization INTEGER, ebitda INTEGER, ebitdaratio DOUBLE, operatingIncome INTEGER, operatingIncomeRatio DOUBLE, totalOtherIncomeExpensesNet INTEGER, incomeBeforeTax INTEGER, incomeBeforeTaxRatio DOUBLE, incomeTaxExpense INTEGER, netIncome INTEGER, netIncomeRatio DOUBLE, eps DOUBLE, epsdiluted DOUBLE, weightedAverageShsOut INTEGER, weightedAverageShsOutDil INTEGER );
+CREATE TABLE IF NOT EXISTS balancesheet_statement( date DATE, symbol VARCHAR(20), reportedCurrency VARCHAR(20), cik VARCHAR(20), fillingDate DATE, acceptedDate DATE, calendarYear INTEGER, period VARCHAR(20), cashAndCashEquivalents INTEGER, shortTermInvestments INTEGER, cashAndShortTermInvestments INTEGER, netReceivables INTEGER, inventory INTEGER, otherCurrentAssets INTEGER, totalCurrentAssets INTEGER, propertyPlantEquipmentNet INTEGER, goodwill INTEGER, intangibleAssets INTEGER, goodwillAndIntangibleAssets INTEGER, longTermInvestments INTEGER, taxAssets INTEGER, otherNonCurrentAssets INTEGER, totalNonCurrentAssets INTEGER, otherAssets INTEGER, totalAssets INTEGER, accountPayables INTEGER, shortTermDebt INTEGER, taxPayables INTEGER, deferredRevenue INTEGER, otherCurrentLiabilities INTEGER, totalCurrentLiabilities INTEGER, longTermDebt INTEGER, deferredRevenueNonCurrent INTEGER, deferredTaxLiabilitiesNonCurrent INTEGER, otherNonCurrentLiabilities INTEGER, totalNonCurrentLiabilities INTEGER, otherLiabilities INTEGER, capitalLeaseObligations INTEGER, totalLiabilities VARCHAR(20), preferredStock VARCHAR(20), commonStock VARCHAR(20), retainedEarnings VARCHAR(20), accumulatedOtherComprehensiveIncomeLoss VARCHAR(20), othertotalStockholdersEquity VARCHAR(20), totalStockholdersEquity VARCHAR(20), totalEquity VARCHAR(20), totalLiabilitiesAndStockholdersEquity VARCHAR(20), minorityInterest VARCHAR(20), totalLiabilitiesAndTotalEquity VARCHAR(20), totalInvestments VARCHAR(20), totalDebt VARCHAR(20), netDebt VARCHAR(20) ); 
+CREATE TABLE IF NOT EXISTS cashflow_statement( date DATE, symbol VARCHAR(20), reportedCurrency VARCHAR(20), cik VARCHAR(20), fillingDate DATE, acceptedDate DATE, calendarYear INTEGER, period VARCHAR(20), netIncome INTEGER, depreciationAndAmortization INTEGER, deferredIncomeTax INTEGER, stockBasedCompensation INTEGER, changeInWorkingCapital INTEGER, accountsReceivables INTEGER, inventory INTEGER, accountsPayables INTEGER, otherWorkingCapital INTEGER, otherNonCashItems INTEGER, netCashProvidedByOperatingActivities INTEGER, investmentsInPropertyPlantAndEquipment INTEGER, acquisitionsNet INTEGER, purchasesOfInvestments INTEGER, salesMaturitiesOfInvestments INTEGER, otherInvestingActivites INTEGER, netCashUsedForInvestingActivites INTEGER, debtRepayment INTEGER, commonStockIssued INTEGER, commonStockRepurchased INTEGER, dividendsPaid INTEGER, otherFinancingActivites INTEGER, netCashUsedProvidedByFinancingActivities INTEGER, effectOfForexChangesOnCash INTEGER, netChangeInCash INTEGER, cashAtEndOfPeriod INTEGER, cashAtBeginningOfPeriod INTEGER, operatingCashFlow INTEGER, capitalExpenditure INTEGER, freeCashFlow INTEGER ); 
+The 'symbol' column in each table contains the companies names in capital letters.
+
+{request}
+
+Generate suggestion:
+"""
+
+PROMPT3 = PromptTemplate(input_variables=["request"], template=template3)
+
+# Suggestion Generation Chain - created using LCEL (LangChain Expression Language)
+chain3 = (PROMPT3
+          | llm
+          | StrOutputParser()       # to get output in a more usable format
+          )
+
 # Final Chain
 final_chain = chain1 | chain2
 
@@ -122,8 +153,11 @@ async def main(message: cl.Message):
     
     # Execute code
     output = repl_tool.run(code_response)
-    #print(output)
+    # print(output)
 
+    # Generate suggestions
+    suggest = chain3.invoke({"request": message.content})
+    
     # Send the plot to the chat
     if len(os.listdir('figures')) != 0:
         for imgfile in os.listdir('figures'): 
@@ -132,9 +166,11 @@ async def main(message: cl.Message):
                 # Attach the image to the message
                 image = cl.Image(path="./figures/"+imgfile, name="image1", size="large", display="inline")
                 await cl.Message(
-                    content=f"Response: \n{output}",
-                    elements=[image],
-                ).send()
+                    content=f"Response: \n{output}", 
+                    elements=[image]
+                    ).send()
+                await cl.Message(content=f"Further suggestions: \n{suggest}",).send()
     else:
         # Send response
         await cl.Message(content=f"Response: \n{output}",).send()
+        await cl.Message(content=f"Further suggestion: \n{suggest}",).send()
