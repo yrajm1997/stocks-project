@@ -31,3 +31,7 @@ This is a repo for GenAI M5 AST2
    ```
 
 7. Once the application is running, access it in browser
+
+8. Stop the application by pressing `Ctrl + C`
+
+9. Delete the Codespace by going to `Code` dropdown > Select `Codespaces` tab > Click on 3 dots (...) showing against your codespace and select `Delete`
