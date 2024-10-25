@@ -1,4 +1,4 @@
-# Import Required Packages
+### Import Required Packages
 import os
 import openai
 import sqlite3
@@ -8,13 +8,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
-from langchain.schema.runnable import RunnablePassthrough
+#from langchain_core.runnables import RunnableLambda
+#from langchain.schema.runnable import RunnablePassthrough
 from langchain_experimental.utilities import PythonREPL
 from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
 
-##### SQL Query Generation using an LLM
 
 # Read OpenAI key from Codespaces Secrets
 api_key = os.environ['OPENAI_KEY']             # <-- change this as per your Codespaces secret's name
@@ -25,7 +24,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 llm = ChatOpenAI(model_name="gpt-4o-mini", temperature=0)
 
 
-# Create Chain for Query Generation using LCEL (LangChain Expression Language)
+### Create Chain for Classifying user request as `Need SQL`, `Non SQL`, or `Other`
 # Build prompt
 template0 = """
 Given the user request below, classify it as either being about `Need SQL`, `Non SQL`, or `Other`.
@@ -59,7 +58,7 @@ clf_chain = (PROMPT0
 # print(response0)
 
 
-# Create Chain for Query Generation using LCEL (LangChain Expression Language)
+### Create Chain for SQL Query Generation
 # Build prompt
 template1 = """
 You are a SQLite expert. Given an input request, return a syntactically correct SQLite query to run.
@@ -89,7 +88,7 @@ SQLQuery:
 
 PROMPT1 = PromptTemplate(input_variables=["request"], template=template1)
 
-# Query Generation Chain - created using LCEL (LangChain Expression Language)
+# SQL Query Generation Chain
 sql_chain = (PROMPT1
              | llm
              | StrOutputParser()       # to get output in a more usable format
@@ -100,7 +99,7 @@ sql_chain = (PROMPT1
 # print(response1)
 
 
-### Python Code generation using an LLM
+### Python tool for code execution
 python_repl = PythonREPL()
 repl_tool = Tool(
     name="python_repl",
@@ -110,7 +109,7 @@ repl_tool = Tool(
 repl_tool.run("1+1")
 
 
-# Create Chain for Insights Generation
+### Create Chain for Insights Generation
 # Build prompt
 template2 = """
 Use the following pieces of user request and sql query to generate python code that should first load the required data from 'stock_db.sqlite' database and 
@@ -126,14 +125,14 @@ Generate code:
 
 PROMPT2 = PromptTemplate(input_variables=["request_plus_sqlquery"], template=template2)
 
-# Code Generation Chain - created using LCEL (LangChain Expression Language)
+# Code Generation Chain
 code_chain = (PROMPT2
               | llm
               | StrOutputParser()       # to get output in a more usable format
               )
 
 
-# Create Chain for Generating Suggestions
+### Create Chain for Generating Suggestions
 # Build prompt
 template3 = """
 Use the following pieces of user request and database details to generate suggestions for user to ask for useful insights from the database.
@@ -154,14 +153,14 @@ Generate suggestion:
 
 PROMPT3 = PromptTemplate(input_variables=["request"], template=template3)
 
-# Suggestion Generation Chain - created using LCEL (LangChain Expression Language)
+# Suggestion Generation Chain
 sug_chain = (PROMPT3
              | llm
              | StrOutputParser()       # to get output in a more usable format
              )
 
 
-# Create Chain for Generating Response for General queries about the data stored in DB
+### Create Chain for Generating Response for General queries about the data stored in DB
 # Build prompt
 template4 = """
 Use the following user request and database details to generate appropriate response describing the data stored inside the database.
@@ -182,14 +181,14 @@ Generate response:
 
 PROMPT4 = PromptTemplate(input_variables=["request"], template=template4)
 
-# Suggestion Generation Chain - created using LCEL (LangChain Expression Language)
+# General Response Chain
 gnrl_chain = (PROMPT4
               | llm
               | StrOutputParser()       # to get output in a more usable format
               )
 
 
-# Club SQL + Code generation Chain
+# Club SQL + Code generation chains
 sql_code_chain = sql_chain | code_chain
 
 
@@ -215,10 +214,10 @@ async def main(message: cl.Message):
     clf_label = clf_chain.invoke({"request": message.content})
 
     if "need sql" in clf_label.lower():
-        # Generate code for insights
+        ## Generate code for insights
         code_response = sql_code_chain.invoke({"request": message.content})
-        # # print(code_response)
-        # Execute code
+        # print(code_response)
+        ## Execute code
         output = repl_tool.run(code_response)
         # print(output)
     elif "non sql" in clf_label.lower():
@@ -234,7 +233,7 @@ async def main(message: cl.Message):
         for imgfile in os.listdir('figures'): 
             print(imgfile)
             if os.path.isfile(os.path.join('figures', imgfile)) and imgfile != '__init__.py':
-                # Attach the image to the message
+                # Attach the image to the message and send response, image, and suggestions
                 image = cl.Image(path="./figures/"+imgfile, name="image1", size="large", display="inline")
                 await cl.Message(
                     content=f"Response: \n{output}", 
@@ -242,6 +241,6 @@ async def main(message: cl.Message):
                     ).send()
                 await cl.Message(content=f"Further suggestions: \n{suggest}",).send()
     else:
-        # Send response
+        # Send response and suggestions
         await cl.Message(content=f"Response: \n{output}",).send()
         await cl.Message(content=f"Further suggestions: \n{suggest}",).send()
