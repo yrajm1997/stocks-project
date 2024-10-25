@@ -8,8 +8,6 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-#from langchain_core.runnables import RunnableLambda
-#from langchain.schema.runnable import RunnablePassthrough
 from langchain_experimental.utilities import PythonREPL
 from langchain_core.tools import Tool
 from langchain_openai import ChatOpenAI
