@@ -195,7 +195,10 @@ import chainlit as cl
 
 @cl.on_chat_start            # for actions to happen when the chat starts
 async def main():
-    await cl.Message(content=f"Welcome to Stock Prices Insights Application").send()
+    msg = """Welcome to Stock Prices Insights Application
+    Enter a query such as: 
+    Show me the revenue of IT companies in the past 3 years."""
+    await cl.Message(content=msg).send()
 
 @cl.on_message               # for actions to happen whenever user enters a message
 async def main(message: cl.Message):
