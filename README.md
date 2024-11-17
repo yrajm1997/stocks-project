@@ -1,5 +1,7 @@
 # stocks-project
-This is a repo for GenAI M5 AST2
+
+## Architecture
+![architecture](https://drive.google.com/uc?id=1vlkHv_d0MNDK_P-SnKGLMXvRidXaa8sS)
 
 ## Steps to Follow
 
