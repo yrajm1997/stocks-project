@@ -37,3 +37,11 @@
 8. Stop the application by pressing `Ctrl + C`
 
 9. Delete the Codespace by going to `Code` dropdown > Select `Codespaces` tab > Click on 3 dots (...) showing against your codespace and select `Delete`
+
+## Inference Images
+
+![inference1](https://drive.google.com/uc?id=1vfFMoUureOm1XmfROALLFZmBq6sF3NGL)
+
+![inference2](https://drive.google.com/uc?id=18e1mbphAId91r4hetQSQ5nj0KSw1ADAj)
+
+![inference3](https://drive.google.com/uc?id=1NgfzHgan5VFMmdVZ4OupiWdqd9kHTx0t)
