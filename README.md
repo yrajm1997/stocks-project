@@ -1,4 +1,4 @@
-# stocks-project
+# Stock Prices Insights Generation
 
 ## Architecture
 ![architecture](https://drive.google.com/uc?id=1vlkHv_d0MNDK_P-SnKGLMXvRidXaa8sS)
